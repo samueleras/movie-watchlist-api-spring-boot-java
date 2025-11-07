@@ -1,0 +1,12 @@
+services:
+  mysql:
+    container_name: 'watchlist-database'
+    image: 'mysql:latest'
+    restart: always
+    environment:
+      - 'MYSQL_DATABASE=watchlist-database'
+      - 'MYSQL_PASSWORD=secret'
+      - 'MYSQL_ROOT_PASSWORD=verysecret'
+      - 'MYSQL_USER=samuel'
+    ports:
+      - '3306:3306'
