@@ -9,7 +9,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.io.IOException;
 import java.util.List;
 
 @RestController
@@ -26,12 +25,9 @@ public class MovieController {
     @GetMapping("/movies")
     public ResponseEntity<List<MovieDto>> listMovies() {
         try {
-            List<MovieEntity> movies = movieRepository.getAll();
+            List<MovieEntity> movies = movieRepository.findAll();
             List<MovieDto> movieDtos = movies.stream().map(movieMapper::mapTo).toList();
             return new ResponseEntity<>(movieDtos, HttpStatus.OK);
-        } catch (IOException e) {
-            System.out.println(e.getMessage());
-            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         } catch (Exception e) {
             System.out.println(e.getMessage());
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
