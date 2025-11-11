@@ -1,5 +1,6 @@
 package com.samuel.movie_watchlist_api.controllers;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.samuel.movie_watchlist_api.assembler.MovieModelAssembler;
 import com.samuel.movie_watchlist_api.domain.MovieEntity;
 import com.samuel.movie_watchlist_api.domain.dto.MovieDto;
@@ -21,6 +22,8 @@ import java.util.Optional;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(MovieController.class)
@@ -28,6 +31,9 @@ public class MovieControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @Autowired
+    private ObjectMapper objectMapper;
 
     @MockitoBean
     private MovieRepository movieRepository;
@@ -50,6 +56,7 @@ public class MovieControllerTest {
         when(movieModelAssembler.toModel(dto1)).thenReturn(em1);
 
         mockMvc.perform(get("/movie/1"))
+                .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value("1"))
                 .andExpect(jsonPath("$.title").value("Inception"))
@@ -61,6 +68,7 @@ public class MovieControllerTest {
     void testThatGetMovieWithInvalidIDReturnsNotFound() throws Exception {
         when(movieRepository.findById(1L)).thenReturn(Optional.empty());
         mockMvc.perform(get("/movie/1"))
+                .andDo(print())
                 .andExpect(status().isNotFound());
     }
 
@@ -85,6 +93,7 @@ public class MovieControllerTest {
         when(movieModelAssembler.toCollectionModel(any())).thenReturn(collectionModel);
 
         mockMvc.perform(get("/movies"))
+                .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$._embedded.movies[0].id").value("1"))
                 .andExpect(jsonPath("$._embedded.movies[1].id").value("2"))
@@ -96,4 +105,39 @@ public class MovieControllerTest {
                 .andExpect(jsonPath("$._embedded.movies[1]._links.self.href", Matchers.endsWith("/movie/2")))
                 .andExpect(jsonPath("$._links.self.href", Matchers.endsWith("/movies")));
     }
+
+    @Test
+    void testThatAddMovieInsertsandReturnsMovie() throws Exception {
+        MovieDto movieDto = MovieDto.builder().title("Inception").build();
+        MovieEntity movieEntity = MovieEntity.builder().title("Inception").build();
+        MovieEntity movieEntityWithId = MovieEntity.builder().id(1L).title("Inception").build();
+        MovieDto movieDtoWithId = MovieDto.builder().id(1L).title("Inception").build();
+        EntityModel<MovieDto> entityModel = EntityModel.of(movieDtoWithId,
+                Link.of("/movies").withRel("movies"), Link.of("/movie/1").withSelfRel());
+
+        when(movieMapper.mapFrom(movieDto)).thenReturn(movieEntity);
+        when(movieRepository.save(movieEntity)).thenReturn(movieEntityWithId);
+        when(movieMapper.mapTo(movieEntityWithId)).thenReturn(movieDtoWithId);
+        when(movieModelAssembler.toModel(movieDtoWithId)).thenReturn(entityModel);
+
+        mockMvc.perform(post("/movies").contentType("application/json").content(objectMapper.writeValueAsString(movieDto)))
+                .andDo(print())
+                .andExpectAll(
+                        status().isCreated(),
+                        jsonPath("$.id").value("1"),
+                        jsonPath("$.title").value("Inception"),
+                        jsonPath("$._links.movies.href").value(Matchers.endsWith("/movies")),
+                        jsonPath("$._links.self.href").value(Matchers.endsWith("/movie/1"))
+                );
+    }
+
+    @Test
+    void testThatAddMovieReturns400WhenMovieIDisProvided() throws Exception {
+        MovieDto movieDto = MovieDto.builder().id(1L).title("Inception").build();
+        mockMvc.perform(post("/movies").contentType("application/json").content(objectMapper.writeValueAsString(movieDto)))
+                .andDo(print())
+                .andExpect(status().isBadRequest());
+    }
+
+
 }

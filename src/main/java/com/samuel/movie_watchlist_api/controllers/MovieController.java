@@ -1,5 +1,6 @@
 package com.samuel.movie_watchlist_api.controllers;
 
+import com.samuel.movie_watchlist_api.Exceptions.InvalidInputException;
 import com.samuel.movie_watchlist_api.Exceptions.MovieNotFoundException;
 import com.samuel.movie_watchlist_api.assembler.MovieModelAssembler;
 import com.samuel.movie_watchlist_api.domain.MovieEntity;
@@ -10,9 +11,8 @@ import org.springframework.hateoas.CollectionModel;
 import org.springframework.hateoas.EntityModel;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
 import java.util.List;
 
 @RestController
@@ -42,6 +42,18 @@ public class MovieController {
         List<MovieDto> movieDtos = movieEntities.stream().map(movieMapper::mapTo).toList();
         CollectionModel<EntityModel<MovieDto>> collectionModel = movieModelAssembler.toCollectionModel(movieDtos);
         return new ResponseEntity<>(collectionModel, HttpStatus.OK);
+    }
+
+    @PostMapping("/movies")
+    public ResponseEntity<EntityModel<MovieDto>> addMovie(@RequestBody MovieDto movieDto) {
+        if (movieDto.getId() != null) {
+            throw new InvalidInputException("ID must not be provided for new movies");
+        }
+        MovieEntity movieEntity = movieMapper.mapFrom(movieDto);
+        movieEntity = movieRepository.save(movieEntity);
+        movieDto = movieMapper.mapTo(movieEntity);
+        EntityModel<MovieDto> movieModel = movieModelAssembler.toModel(movieDto);
+        return new ResponseEntity<>(movieModel, HttpStatus.CREATED);
     }
 
 }
