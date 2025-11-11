@@ -1,5 +1,6 @@
 package com.samuel.movie_watchlist_api.controllers;
 
+import com.samuel.movie_watchlist_api.Exceptions.MovieNotFoundException;
 import com.samuel.movie_watchlist_api.assembler.MovieModelAssembler;
 import com.samuel.movie_watchlist_api.domain.MovieEntity;
 import com.samuel.movie_watchlist_api.domain.dto.MovieDto;
@@ -10,8 +11,8 @@ import org.springframework.hateoas.EntityModel;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
-
 import java.util.List;
 
 @RestController
@@ -27,12 +28,20 @@ public class MovieController {
         this.movieModelAssembler = movieModelAssembler;
     }
 
+    @GetMapping("/movie/{id}")
+    public ResponseEntity<EntityModel<MovieDto>> getMovie(@PathVariable Long id) {
+        MovieEntity movieEntity = movieRepository.findById(id).orElseThrow(() -> new MovieNotFoundException(id));
+        MovieDto movieDto = movieMapper.mapTo(movieEntity);
+        EntityModel<MovieDto> movieModel = movieModelAssembler.toModel(movieDto);
+        return new ResponseEntity<>(movieModel, HttpStatus.OK);
+    }
+
     @GetMapping("/movies")
-    public ResponseEntity<CollectionModel<EntityModel<MovieDto>>> listMovies() {
+    public ResponseEntity<CollectionModel<EntityModel<MovieDto>>> getMovies() {
         List<MovieEntity> movieEntities = movieRepository.findAll();
         List<MovieDto> movieDtos = movieEntities.stream().map(movieMapper::mapTo).toList();
         CollectionModel<EntityModel<MovieDto>> collectionModel = movieModelAssembler.toCollectionModel(movieDtos);
-        return new ResponseEntity<CollectionModel<EntityModel<MovieDto>>>(collectionModel, HttpStatus.OK);
+        return new ResponseEntity<>(collectionModel, HttpStatus.OK);
     }
 
 }

@@ -8,7 +8,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.http.MediaType;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -36,9 +35,25 @@ public class MovieControllerIT {
     }
 
     @Test
-    void testThatListMoviesReturnsMovies() throws Exception {
-        mockMvc.perform(get("/movies")
-                        .contentType(MediaType.APPLICATION_JSON))
+    void testThatGetMovieReturnsMovie() throws Exception {
+        mockMvc.perform(get("/movie/1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(1))
+                .andExpect(jsonPath("$.title").value("Inception"))
+                .andExpect(jsonPath("$._links.movies.href").value(Matchers.endsWith("/movies")))
+                .andExpect(jsonPath("$._links.self.href").value(Matchers.endsWith("/movie/1")));
+    }
+
+    @Test
+    void testThatGetMovieWithInvalidIDReturnsNotFound() throws Exception {
+        mockMvc.perform(get("/movie/3"))
+                .andExpect(status().isNotFound());
+    }
+
+
+    @Test
+    void testThatGetMoviesReturnsMovies() throws Exception {
+        mockMvc.perform(get("/movies"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$._embedded.movies[0].id").value(movie1.getId()))
                 .andExpect(jsonPath("$._embedded.movies[1].id").value(movie2.getId()))
@@ -46,6 +61,8 @@ public class MovieControllerIT {
                 .andExpect(jsonPath("$._embedded.movies[1].title").value("Interstellar"))
                 .andExpect(jsonPath("$._embedded.movies[0]._links.movies.href", Matchers.endsWith("/movies")))
                 .andExpect(jsonPath("$._embedded.movies[1]._links.movies.href", Matchers.endsWith("/movies")))
+                .andExpect(jsonPath("$._embedded.movies[0]._links.self.href", Matchers.endsWith("/movie/" + movie1.getId())))
+                .andExpect(jsonPath("$._embedded.movies[1]._links.self.href", Matchers.endsWith("/movie/" + movie2.getId())))
                 .andExpect(jsonPath("$._links.self.href", Matchers.endsWith("/movies")));
     }
 }
